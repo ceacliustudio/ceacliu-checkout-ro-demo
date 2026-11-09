@@ -128,7 +128,9 @@ var TX = {
     active: "activă", inactive: "INACTIVĂ fiscal", vat: "plătitoare de TVA", novat: "neplătitoare de TVA", needcui: "Introduceți codul fiscal (CUI) al firmei.", needname: "Introduceți denumirea firmei.", needreg: "Introduceți numărul de la Registrul Comerțului.", refused: "%s este inactivă sau radiată la ANAF, așa că nu o putem factura. Vă rugăm să ne contactați.", needaddr: "Completați strada, localitatea și codul poștal.",
     invoice: "Factură pe firmă", private: "Persoană fizică – fără date de firmă pe comandă.", note: "Notă pe comandă: Verificare ANAF pentru CUI %1: %2", optional: "(opțional)"}
 };
-var LANG = "en";
+// Romanian for visitors whose browser speaks Romanian (or ?lang=ro), English for everyone else
+var LANG = /[?&]lang=(ro|en)/.test(location.search) ? location.search.match(/[?&]lang=(ro|en)/)[1]
+  : (/^ro/i.test(navigator.language || "") ? "ro" : "en");
 function t(k) { return TX[LANG][k] || TX.en[k] || k; }
 function summary(c) { return c.name + " – " + (c.inactive ? t("inactive") : t("active")) + ", " + (c.vat ? t("vat") : t("novat")); }
 var sel = document.getElementById("billing_state");
@@ -145,6 +147,7 @@ function setTexts() {
   document.documentElement.lang = LANG;
 }
 setTexts();
+document.querySelectorAll(".lang button").forEach(function (b) { b.classList.toggle("on", b.dataset.lang === LANG); });
 
 /* simulated ANAF answers (in a shop the plugin asks the real ANAF service) */
 var realFetch = window.fetch;
