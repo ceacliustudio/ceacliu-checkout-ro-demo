@@ -1,0 +1,296 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ceacliu Checkout RO – live demo</title>
+<meta name="description" content="Live demo of Ceacliu Checkout RO for WooCommerce: Romanian company details at checkout, CUI check and ANAF autofill.">
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<style>
+:root{--a:#0b5cad;--bg:#f6f7f7;--card:#fff;--fg:#1d2327;--mut:#50575e;--line:#dcdcde}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.5 "Segoe UI",Arial,sans-serif}
+header.top{background:linear-gradient(120deg,#0a3f7a,#0b5cad 60%,#1f7ae0);color:#fff;padding:18px 16px}
+header.top .in{max-width:1100px;margin:0 auto;display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between}
+header.top h1{margin:0;font-size:22px}
+header.top p{margin:2px 0 0;opacity:.9}
+.lang button{background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.4);border-radius:999px;padding:5px 12px;cursor:pointer;font:inherit}
+.lang button.on{background:#fff;color:#0a3f7a}
+.wrap{max-width:1100px;margin:20px auto;padding:0 16px;display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:20px}
+@media (max-width:860px){.wrap{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:18px}
+h2{font-size:18px;margin:0 0 12px}
+h3{font-size:15px;margin:16px 0 8px}
+/* WooCommerce-like classic checkout form */
+form.checkout .form-row{margin:0 0 12px;padding:0}
+form.checkout .form-row label{display:block;margin-bottom:4px;font-weight:600}
+form.checkout .form-row-first,form.checkout .form-row-last{width:48%;display:inline-block;vertical-align:top}
+form.checkout .form-row-last{margin-left:3%}
+@media (max-width:520px){form.checkout .form-row-first,form.checkout .form-row-last{width:100%;margin-left:0}}
+form.checkout input[type=text],form.checkout input[type=email],form.checkout select{width:100%;padding:9px 10px;border:1px solid #8c8f94;border-radius:4px;font:inherit;background:#fff}
+form.checkout .checkbox{font-weight:400!important;display:flex!important;gap:8px;align-items:center;cursor:pointer}
+.required{color:#b32d2e;text-decoration:none;border:0}
+.optional{color:var(--mut);font-weight:400}
+.btn{background:var(--a);color:#fff;border:0;border-radius:6px;padding:12px 18px;font:600 16px "Segoe UI",Arial;cursor:pointer;width:100%}
+.err{background:#fcf0f1;color:#8a2424;border-radius:6px;padding:10px 12px;margin:0 0 12px;display:none}
+.try button{display:block;width:100%;text-align:left;margin:0 0 8px;padding:8px 10px;border:1px solid var(--line);border-radius:6px;background:#fff;cursor:pointer;font:inherit}
+.try button b{font-family:Consolas,monospace}
+.try small{display:block;color:var(--mut)}
+.opts label{display:flex;gap:8px;margin:6px 0;cursor:pointer}
+.note{color:var(--mut);font-size:13px}
+.order{display:none}
+.order .box{background:#f6f7f7;border-radius:8px;padding:12px 14px;margin:10px 0}
+.order .anaf{font-style:italic;color:#1a4d27}
+footer{max-width:1100px;margin:10px auto 40px;padding:0 16px;color:var(--mut);font-size:13px}
+/* Ceacliu Checkout RO */
+.ceacliu-cro-msg{margin:-4px 0 12px;font-size:.9em;padding:6px 10px;border-radius:4px;background:#f0f6fc;color:#1d2327;clear:both}
+.ceacliu-cro-msg.is-ok{background:#edfaef;color:#1a4d27}
+.ceacliu-cro-msg.is-warn{background:#fcf9e8;color:#614a19}
+.ceacliu-cro-msg.is-error{background:#fcf0f1;color:#8a2424}
+.ceacliu-cro-hide .ceacliu-cro-company{display:none!important}
+
+</style>
+</head>
+<body>
+<header class="top"><div class="in">
+  <div><h1>Ceacliu Checkout RO – live demo</h1><p data-t="sub">Type a CUI: the company name, trade register number and invoice address fill in by themselves.</p></div>
+  <div class="lang"><button type="button" data-lang="en" class="on">English</button> <button type="button" data-lang="ro">Română</button></div>
+</div></header>
+
+<div class="wrap">
+  <main class="card">
+    <div id="checkout">
+      <h2 data-t="billing">Billing details</h2>
+      <div class="err" id="err"></div>
+      <form class="checkout woocommerce-checkout" onsubmit="return false">
+        <div class="woocommerce-billing-fields">
+          <p class="form-row form-row-first" id="billing_first_name_field"><label for="billing_first_name"><span data-t="first">First name</span> <abbr class="required">*</abbr></label><input type="text" id="billing_first_name" value="Andrei"></p>
+          <p class="form-row form-row-last" id="billing_last_name_field"><label for="billing_last_name"><span data-t="last">Last name</span> <abbr class="required">*</abbr></label><input type="text" id="billing_last_name" value="Marin"></p>
+          <p class="form-row form-row-wide ceacliu-cro-toggle" id="billing_is_company_field"><label class="checkbox"><input type="checkbox" id="billing_is_company" value="1"> <span data-t="isco">I am buying as a company</span></label></p>
+          <p class="form-row form-row-first ceacliu-cro-company" id="billing_cui_field"><label for="billing_cui"><span data-t="cui">Company tax ID (CUI)</span> <span class="optional">(optional)</span></label><input type="text" id="billing_cui" placeholder="RO12345678" autocomplete="off"></p>
+          <p class="form-row form-row-last ceacliu-cro-company" id="billing_nr_reg_com_field"><label for="billing_nr_reg_com"><span data-t="reg">Trade register number</span> <span class="optional">(optional)</span></label><input type="text" id="billing_nr_reg_com" placeholder="J2020000123401"></p>
+          <p class="form-row form-row-wide ceacliu-cro-company" id="billing_company_field"><label for="billing_company"><span data-t="company">Company name</span> <span class="optional">(optional)</span></label><input type="text" id="billing_company"></p>
+          <p class="form-row form-row-wide" id="billing_country_field"><label for="billing_country"><span data-t="country">Country</span> <abbr class="required">*</abbr></label><select id="billing_country"><option value="RO">Romania</option><option value="DE">Germany</option><option value="IT">Italy</option></select></p>
+          <p class="form-row form-row-wide" id="billing_address_1_field"><label for="billing_address_1"><span data-t="street">Street address</span> <abbr class="required">*</abbr></label><input type="text" id="billing_address_1"></p>
+          <p class="form-row form-row-wide" id="billing_address_2_field"><input type="text" id="billing_address_2" data-ph="apt" placeholder="Apartment, suite, etc. (optional)"></p>
+          <p class="form-row form-row-first" id="billing_city_field"><label for="billing_city"><span data-t="city">Town / City</span> <abbr class="required">*</abbr></label><input type="text" id="billing_city"></p>
+          <p class="form-row form-row-last" id="billing_state_field"><label for="billing_state"><span data-t="county">County</span> <abbr class="required">*</abbr></label><select id="billing_state"></select></p>
+          <p class="form-row form-row-first" id="billing_postcode_field"><label for="billing_postcode"><span data-t="postcode">Postcode</span> <abbr class="required">*</abbr></label><input type="text" id="billing_postcode"></p>
+          <p class="form-row form-row-last" id="billing_email_field"><label for="billing_email">E-mail <abbr class="required">*</abbr></label><input type="email" id="billing_email" value="andrei@example.com"></p>
+        </div>
+        <button type="button" class="btn" id="place" data-t="place">Place order</button>
+      </form>
+    </div>
+    <div class="order" id="order">
+      <h2 data-t="received">Order received – what the shop sees</h2>
+      <div class="box" id="orderbox"></div>
+      <p class="note" data-t="metanote">Saved on the order as _billing_is_company, _billing_cui, _billing_nr_reg_com and the billing company, so invoicing plugins can use it.</p>
+      <button type="button" class="btn" id="again" data-t="again">Try another order</button>
+    </div>
+  </main>
+
+  <aside>
+    <div class="card try">
+      <h2 data-t="try">Try these tax IDs</h2>
+      <p class="note" data-t="trynote">Tick "I am buying as a company" first. The companies below are invented for the demo; in your shop the data comes live from ANAF.</p>
+      <button type="button" data-cui="RO49123456"><b>RO49123456</b><small data-t="c1">active company, VAT payer</small></button>
+      <button type="button" data-cui="49555110"><b>49555110</b><small data-t="c2">active company, not a VAT payer</small></button>
+      <button type="button" data-cui="49666126"><b>49666126</b><small data-t="c3">company inactive for tax purposes</small></button>
+      <button type="button" data-cui="49777132"><b>49777132</b><small data-t="c4">valid number, but no such company</small></button>
+      <button type="button" data-cui="49123457"><b>49123457</b><small data-t="c5">typing mistake (wrong control digit)</small></button>
+      <button type="button" data-cui="DE123456789"><b>DE123456789</b><small data-t="c6">foreign VAT number – accepted as typed</small></button>
+    </div>
+    <div class="card opts" style="margin-top:16px">
+      <h2 data-t="settings">Shop settings</h2>
+      <label><input type="checkbox" id="opt_fill" checked> <span data-t="o1">Also fill in the billing address from ANAF</span></label>
+      <label><input type="checkbox" id="opt_reg"> <span data-t="o2">Trade register number required</span></label>
+      <label><input type="checkbox" id="opt_block"> <span data-t="o3">Refuse inactive or deregistered companies</span></label>
+    </div>
+  </aside>
+</div>
+<footer>Ceacliu Checkout RO · by Ceacliu Studios · <a href="mailto:ceacliu@gmail.com">ceacliu@gmail.com</a> · <span data-t="foot">This page runs the plugin's own checkout script; the ANAF answers are simulated.</span></footer>
+
+<script>
+/* ---------- demo data and texts ---------- */
+var COUNTIES = {AB:"Alba",AR:"Arad",AG:"Argeș",BC:"Bacău",BH:"Bihor",BN:"Bistrița-Năsăud",BT:"Botoșani",BR:"Brăila",BV:"Brașov",B:"București",BZ:"Buzău",CL:"Călărași",CS:"Caraș-Severin",CJ:"Cluj",CT:"Constanța",CV:"Covasna",DB:"Dâmbovița",DJ:"Dolj",GL:"Galați",GR:"Giurgiu",GJ:"Gorj",HR:"Harghita",HD:"Hunedoara",IL:"Ialomița",IS:"Iași",IF:"Ilfov",MM:"Maramureș",MH:"Mehedinți",MS:"Mureș",NT:"Neamț",OT:"Olt",PH:"Prahova",SJ:"Sălaj",SM:"Satu Mare",SB:"Sibiu",SV:"Suceava",TR:"Teleorman",TM:"Timiș",TL:"Tulcea",VL:"Vâlcea",VS:"Vaslui",VN:"Vrancea"};
+var DEMO = {
+  "49123456": {name: "CEACLIU STUDIOS SRL", reg_com: "J2024001234289", vat: true, inactive: false, address_1: "Str. Exemplului nr. 10", address_2: "Bl. A, Ap. 2", city: "Slatina", state: "OT", postcode: "230001"},
+  "49555110": {name: "PIZZERIA DEMO SRL", reg_com: "J2023000555162", vat: false, inactive: false, address_1: "Bd. Demonstrației nr. 7", address_2: "", city: "Craiova", state: "DJ", postcode: "200100"},
+  "49666126": {name: "FIRMA INACTIVA DEMO SRL", reg_com: "J2019000666037", vat: false, inactive: true, address_1: "Str. Testului nr. 3", address_2: "", city: "Pitești", state: "AG", postcode: "110001"}
+};
+var TX = {
+  en: {sub: "Type a CUI: the company name, trade register number and invoice address fill in by themselves.", billing: "Billing details", first: "First name", last: "Last name", isco: "I am buying as a company", cui: "Company tax ID (CUI)", reg: "Trade register number", company: "Company name", country: "Country", street: "Street address", apt: "Apartment, suite, etc. (optional)", city: "Town / City", county: "County", postcode: "Postcode", place: "Place order", received: "Order received – what the shop sees", metanote: "Saved on the order as _billing_is_company, _billing_cui, _billing_nr_reg_com and the billing company, so invoicing plugins can use it.", again: "Try another order", try: "Try these tax IDs", trynote: "Tick \"I am buying as a company\" first. The companies below are invented for the demo; in your shop the data comes live from ANAF.", c1: "active company, VAT payer", c2: "active company, not a VAT payer", c3: "company inactive for tax purposes", c4: "valid number, but no such company", c5: "typing mistake (wrong control digit)", c6: "foreign VAT number – accepted as typed", settings: "Shop settings", o1: "Also fill in the billing address from ANAF", o2: "Trade register number required", o3: "Refuse inactive or deregistered companies", foot: "This page runs the plugin's own checkout script; the ANAF answers are simulated.",
+    invalid: "This company tax ID (CUI) is not valid. Please check the digits.", looking: "Looking up the company at ANAF…", notfound: "ANAF has no company with this tax ID (CUI).", filled: "Company details filled in from ANAF:",
+    active: "active", inactive: "INACTIVE for tax purposes", vat: "VAT payer", novat: "not a VAT payer", needcui: "Please enter the company tax ID (CUI).", needname: "Please enter the company name.", needreg: "Please enter the trade register number.", refused: "%s is inactive or deregistered at ANAF, so we cannot invoice it. Please contact us.", needaddr: "Please fill in the street, city and postcode.",
+    invoice: "Invoice to company", private: "Private person – no company data on this order.", note: "Order note: ANAF check for CUI %1: %2", optional: "(optional)"},
+  ro: {sub: "Scrieți un CUI: denumirea, nr. Reg. Com. și adresa de facturare se completează singure.", billing: "Detalii facturare", first: "Prenume", last: "Nume", isco: "Cumpăr ca persoană juridică (firmă)", cui: "Cod fiscal (CUI)", reg: "Nr. Registrul Comerțului", company: "Denumirea firmei", country: "Țara", street: "Adresa", apt: "Apartament, bloc etc. (opțional)", city: "Localitate", county: "Județ", postcode: "Cod poștal", place: "Plasează comanda", received: "Comandă primită – ce vede magazinul", metanote: "Se salvează pe comandă ca _billing_is_company, _billing_cui, _billing_nr_reg_com și denumirea firmei, ca să le poată folosi programele de facturare.", again: "Încearcă altă comandă", try: "Încercați aceste coduri", trynote: "Bifați întâi „Cumpăr ca persoană juridică”. Firmele de mai jos sunt inventate pentru demo; în magazinul dvs. datele vin direct de la ANAF.", c1: "firmă activă, plătitoare de TVA", c2: "firmă activă, neplătitoare de TVA", c3: "firmă inactivă fiscal", c4: "cod corect, dar firma nu există", c5: "greșeală de tastare (cifra de control)", c6: "cod de TVA străin – acceptat așa cum e", settings: "Setările magazinului", o1: "Completează și adresa de facturare de la ANAF", o2: "Nr. Reg. Com. obligatoriu", o3: "Refuză firmele inactive sau radiate", foot: "Pagina rulează scriptul real al pluginului; răspunsurile ANAF sunt simulate.",
+    invalid: "Codul fiscal (CUI) nu este valid. Verificați cifrele.", looking: "Caut firma la ANAF…", notfound: "La ANAF nu există nicio firmă cu acest cod fiscal (CUI).", filled: "Date completate de la ANAF:",
+    active: "activă", inactive: "INACTIVĂ fiscal", vat: "plătitoare de TVA", novat: "neplătitoare de TVA", needcui: "Introduceți codul fiscal (CUI) al firmei.", needname: "Introduceți denumirea firmei.", needreg: "Introduceți numărul de la Registrul Comerțului.", refused: "%s este inactivă sau radiată la ANAF, așa că nu o putem factura. Vă rugăm să ne contactați.", needaddr: "Completați strada, localitatea și codul poștal.",
+    invoice: "Factură pe firmă", private: "Persoană fizică – fără date de firmă pe comandă.", note: "Notă pe comandă: Verificare ANAF pentru CUI %1: %2", optional: "(opțional)"}
+};
+var LANG = "en";
+function t(k) { return TX[LANG][k] || TX.en[k] || k; }
+function summary(c) { return c.name + " – " + (c.inactive ? t("inactive") : t("active")) + ", " + (c.vat ? t("vat") : t("novat")); }
+var sel = document.getElementById("billing_state");
+Object.keys(COUNTIES).forEach(function (k) { var o = document.createElement("option"); o.value = k; o.textContent = COUNTIES[k]; sel.appendChild(o); });
+sel.value = "OT";
+
+/* the plugin's settings, as WordPress would print them */
+window.CeacliuCRO = {api: "https://demo.invalid/wp-json/ceacliu-cro/v1/company", lookup: "1", fillAddress: "1", i18n: {}};
+function setTexts() {
+  ["invalid", "looking", "notfound", "filled"].forEach(function (k) { CeacliuCRO.i18n[k] = t(k); });
+  document.querySelectorAll("[data-t]").forEach(function (el) { el.textContent = t(el.dataset.t); });
+  document.querySelectorAll("[data-ph]").forEach(function (el) { el.placeholder = t(el.dataset.ph); });
+  document.querySelectorAll(".optional").forEach(function (el) { el.textContent = t("optional"); });
+  document.documentElement.lang = LANG;
+}
+setTexts();
+
+/* simulated ANAF answers (in a shop the plugin asks the real ANAF service) */
+var realFetch = window.fetch;
+window.fetch = function (url, opt) {
+  if (String(url).indexOf("ceacliu-cro/v1/company") < 0) return realFetch.apply(this, arguments);
+  var cui = decodeURIComponent((String(url).match(/cui=([^&]+)/) || [])[1] || "");
+  var d = DEMO[cui];
+  var body = d ? Object.assign({found: true, cui: cui, removed: false, country: "RO"}, d) : {found: false, cui: cui};
+  if (d) body.summary = summary(d);
+  return new Promise(function (ok) {
+    setTimeout(function () { ok({ok: true, status: 200, json: function () { return Promise.resolve(body); }}); }, 650);
+  });
+};
+</script>
+<script>
+/* Ceacliu Checkout RO – classic checkout: show the company fields, check the CUI, fill in the data from ANAF. */
+(function ($) {
+  "use strict";
+  var C = window.CeacliuCRO || {}, T = C.i18n || {}, last = "", timer = null;
+
+  function digits(v) {
+    v = String(v || "").toUpperCase().replace(/[\s.\-]/g, "");
+    if (v.indexOf("RO") === 0) v = v.slice(2);
+    return /^\d{2,10}$/.test(v) ? v : "";
+  }
+  function foreign(v) {
+    v = String(v || "").toUpperCase().replace(/[\s.\-]/g, "");
+    return /^[A-Z]{2}[0-9A-Z]{2,13}$/.test(v) && v.indexOf("RO") !== 0;
+  }
+  function valid(v) {
+    var c = digits(v), key = "753217532", sum = 0, i, body, check;
+    if (!c) return false;
+    body = ("000000000" + c.slice(0, -1)).slice(-9);
+    for (i = 0; i < 9; i++) sum += Number(body[i]) * Number(key[i]);
+    check = (sum * 10) % 11;
+    return (check === 10 ? 0 : check) === Number(c.slice(-1));
+  }
+  function message(text, kind) {
+    // under both fields (CUI and trade register sit side by side), so the two columns stay together
+    var after = $("#billing_nr_reg_com_field").length ? "#billing_nr_reg_com_field" : "#billing_cui_field";
+    var box = $(".ceacliu-cro-msg");
+    if (!text) { box.remove(); return; }
+    if (!box.length) box = $('<p class="ceacliu-cro-msg ceacliu-cro-company"></p>').insertAfter(after);
+    box.attr("class", "ceacliu-cro-msg ceacliu-cro-company" + (kind ? " is-" + kind : "")).text(text);
+  }
+  function star(id, on) {
+    var label = $(id + " > label");
+    label.find(".ceacliu-cro-req").remove();
+    label.find(".optional").toggle(!on);
+    if (on) label.append(' <abbr class="required ceacliu-cro-req" title="required">*</abbr>');
+    $(id).toggleClass("validate-required", on);
+  }
+  function toggle() {
+    var on = $("#billing_is_company").is(":checked");
+    $("form.checkout, form.woocommerce-address-fields, .woocommerce-billing-fields").toggleClass("ceacliu-cro-hide", !on);
+    star("#billing_cui_field", on);
+    star("#billing_company_field", on);
+  }
+  function set(id, value) {
+    var el = $(id);
+    if (el.length && value) el.val(value).trigger("change");
+  }
+  function fill(r) {
+    set("#billing_company", r.name);
+    set("#billing_nr_reg_com", r.reg_com);
+    if (!C.fillAddress) return;
+    var country = $("#billing_country");
+    if (country.length && country.val() !== "RO") country.val("RO").trigger("change");
+    setTimeout(function () {
+      set("#billing_address_1", r.address_1);
+      $("#billing_address_2").val(r.address_2 || "").trigger("change");
+      set("#billing_city", r.city);
+      $("#billing_postcode").val(r.postcode || "").trigger("change"); // an old postcode would not match the new address
+      set("#billing_state", r.state);
+    }, 300);
+  }
+  function check() {
+    var v = $("#billing_cui").val() || "", c = digits(v);
+    if (!$("#billing_is_company").is(":checked") || !v.trim() || foreign(v)) { message(""); return; }
+    if (!c || !valid(c)) { message(T.invalid, "error"); last = ""; return; }
+    if (c === last) return;
+    last = c;
+    if (!C.lookup) { message(""); return; }
+    message(T.looking);
+    fetch(C.api + (C.api.indexOf("?") < 0 ? "?" : "&") + "cui=" + encodeURIComponent(c))
+      .then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error(j.message || ""); return j; }); })
+      .then(function (r) {
+        if (!r.found) { message(T.notfound, "warn"); return; }
+        fill(r);
+        message(T.filled + " " + r.summary, r.inactive || r.removed ? "warn" : "ok");
+      })
+      .catch(function (e) { last = ""; message(e.message || "", "warn"); });
+  }
+
+  $(function () {
+    toggle();
+    $(document.body).on("change", "#billing_is_company", function () { toggle(); last = ""; check(); });
+    $(document.body).on("input change", "#billing_cui", function () { clearTimeout(timer); timer = setTimeout(check, 600); });
+    $(document.body).on("updated_checkout country_to_state_changed", toggle);
+  });
+})(jQuery);
+
+</script>
+<script>
+/* demo controls */
+(function ($) {
+  $(".lang button").on("click", function () {
+    LANG = this.dataset.lang; $(".lang button").removeClass("on"); $(this).addClass("on"); setTexts();
+    $("#billing_is_company").trigger("change");
+  });
+  $(".try button").on("click", function () {
+    if (!$("#billing_is_company").is(":checked")) $("#billing_is_company").prop("checked", true).trigger("change");
+    $("#billing_cui").val(this.dataset.cui).trigger("input");
+    $("#billing_cui")[0].scrollIntoView({behavior: "smooth", block: "center"});
+  });
+  $("#opt_fill").on("change", function () { CeacliuCRO.fillAddress = this.checked ? "1" : ""; });
+  function digits(v) { v = String(v || "").toUpperCase().replace(/[\s.\-]/g, ""); if (v.indexOf("RO") === 0) v = v.slice(2); return /^\d{2,10}$/.test(v) ? v : ""; }
+  function foreign(v) { v = String(v || "").toUpperCase().replace(/[\s.\-]/g, ""); return /^[A-Z]{2}[0-9A-Z]{2,13}$/.test(v) && v.indexOf("RO") !== 0; }
+  function valid(v) { var c = digits(v), k = "753217532", s = 0, i, b, x; if (!c) return false; b = ("000000000" + c.slice(0, -1)).slice(-9); for (i = 0; i < 9; i++) s += +b[i] * +k[i]; x = s * 10 % 11; return (x === 10 ? 0 : x) === +c.slice(-1); }
+  function esc(s) { return $("<div>").text(s).html(); }
+  // the same checks the plugin makes on the server when the order is placed
+  $("#place").on("click", function () {
+    var err = "", co = $("#billing_is_company").is(":checked"), cui = $.trim($("#billing_cui").val()), name = $.trim($("#billing_company").val()), reg = $.trim($("#billing_nr_reg_com").val());
+    if (co) {
+      if (!cui) err = t("needcui");
+      else if (!foreign(cui) && !valid(cui)) err = t("invalid");
+      else if (!name) err = t("needname");
+      else if ($("#opt_reg").is(":checked") && !reg) err = t("needreg");
+      else if ($("#opt_block").is(":checked") && DEMO[digits(cui)] && DEMO[digits(cui)].inactive) err = t("refused").replace("%s", DEMO[digits(cui)].name);
+    }
+    if (!err && (!$.trim($("#billing_address_1").val()) || !$.trim($("#billing_city").val()) || !$.trim($("#billing_postcode").val()))) err = t("needaddr");
+    if (err) { $("#err").text(err).show(); $("#err")[0].scrollIntoView({behavior: "smooth", block: "center"}); return; }
+    $("#err").hide();
+    var addr = [$("#billing_first_name").val() + " " + $("#billing_last_name").val(), co ? name : "", $("#billing_address_1").val(), $("#billing_address_2").val(), $("#billing_postcode").val() + " " + $("#billing_city").val(), COUNTIES[$("#billing_state").val()] || "", $("#billing_country option:selected").text()].filter(function (x) { return $.trim(x); });
+    var html = "<p>" + addr.map(esc).join("<br>") + "</p>";
+    if (co) {
+      html += "<p><strong>" + esc(t("invoice")) + "</strong><br>" + esc(name) + "<br>CUI: " + esc(cui.toUpperCase().replace(/\s+/g, "")) + (reg ? "<br>Reg. Com.: " + esc(reg) : "") + "</p>";
+      var d = DEMO[digits(cui)];
+      if (d && !foreign(cui)) html += '<p class="anaf">' + esc(t("note").replace("%1", cui.toUpperCase().replace(/\s+/g, "")).replace("%2", summary(d))) + "</p>";
+    } else {
+      html += "<p>" + esc(t("private")) + "</p>";
+    }
+    $("#orderbox").html(html); $("#checkout").hide(); $("#order").show(); window.scrollTo({top: 0, behavior: "smooth"});
+  });
+  $("#again").on("click", function () { $("#order").hide(); $("#checkout").show(); });
+})(jQuery);
+</script>
+</body>
+</html>
